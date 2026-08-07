@@ -1,0 +1,58 @@
+# Serving configuration for llm_serve.
+#
+# Every value here can be overridden by an environment variable of the form
+#   LLM_SERVE_<SECTION>__<OPTION>       e.g. LLM_SERVE_BACKEND__KIND=vllm
+# or on the command line with
+#   --set backend.kind=vllm --set scheduler.max_num_seqs=128
+
+model:
+  name: mistral-7b-qlora
+  base_model: mistralai/Mistral-7B-Instruct-v0.2
+  # Path to the QLoRA adapter produced by the fine-tuning run. Null serves the base model.
+  lora_adapter: null
+  tokenizer: null
+  max_model_len: 8192
+  dtype: bfloat16
+  quantization: null
+  trust_remote_code: false
+
+backend:
+  # mock | vllm | triton | ray | trtllm
+  kind: mock
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.90
+  enable_prefix_caching: true
+  enforce_eager: false
+  swap_space_gb: 4
+  # Required for triton (grpc host:port) and ray (http base URL).
+  endpoint: null
+  # Required for trtllm: directory holding the built engine + config.json.
+  engine_dir: null
+  # CPU-only mock engine timings, used for tests and dry runs.
+  mock_prefill_s: 0.05
+  mock_decode_s: 0.01
+
+scheduler:
+  max_num_seqs: 256
+  max_num_batched_tokens: 8192
+  block_size: 16
+  num_gpu_blocks: 4096
+  watermark: 0.01
+  enable_chunked_prefill: true
+  max_waiting: 2048
+  preemption_mode: recompute
+
+server:
+  host: 0.0.0.0
+  port: 8000
+  api_key: null
+  max_concurrent_requests: 512
+  request_timeout_s: 300.0
+  served_model_name: mistral-7b-qlora
+
+metrics:
+  enabled: true
+  namespace: llm_serve
+  ttft_buckets_s: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+  itl_buckets_s: [0.005, 0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64]
+  e2e_buckets_s: [0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0]
