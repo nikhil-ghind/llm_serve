@@ -1,0 +1,55 @@
+# Benchmark configuration. Load with:
+#   python scripts/run_benchmark.py --config configs/bench.yaml --backend vllm
+#
+# Merged with configs/serving.yaml semantics: the same sections apply, so a run
+# can pin engine settings and workload shape in one file.
+
+model:
+  name: mistral-7b-qlora
+  base_model: mistralai/Mistral-7B-Instruct-v0.2
+  lora_adapter: null
+  max_model_len: 8192
+  dtype: bfloat16
+
+backend:
+  kind: mock
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.90
+  enable_prefix_caching: true
+  endpoint: null
+  engine_dir: null
+  mock_prefill_s: 0.05
+  mock_decode_s: 0.01
+
+scheduler:
+  max_num_seqs: 256
+  max_num_batched_tokens: 8192
+  block_size: 16
+
+bench:
+  # Closed loop by default: workers send the next request as soon as one returns,
+  # which measures capacity. Set request_rate for an open-loop run instead.
+  concurrency: 16
+  num_requests: 200
+  duration_s: null
+  request_rate: null
+  warmup_requests: 8
+
+  # Length distribution. A spread (not a fixed length) is what exercises
+  # continuous batching, since short requests must not queue behind long ones.
+  input_len: 512
+  input_len_std: 64
+  output_len: 128
+  output_len_std: 16
+
+  # Tokens of system prompt shared by every request. Raise this to make the
+  # prefix-cache win visible (chat and RAG traffic look like this).
+  shared_prefix_len: 0
+
+  seed: 42
+
+  # A request counts toward goodput only if it meets both budgets.
+  slo_ttft_s: 1.0
+  slo_itl_s: 0.05
+
+  gpu_sample_interval_s: 0.5
