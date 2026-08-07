@@ -1,0 +1,85 @@
+name: "mistral7b"
+backend: "python"
+
+# Decoupled transaction policy: one request may emit many responses, which is
+# how Triton streams tokens. Without this, the client would block until the
+# whole completion is finished.
+model_transaction_policy {
+  decoupled: True
+}
+
+# The vLLM engine does its own continuous batching, so Triton must not batch on
+# top of it — requests are forwarded one at a time and merged inside the engine.
+max_batch_size: 0
+
+input [
+  {
+    name: "text_input"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  },
+  {
+    name: "sampling_parameters"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+    optional: true
+  },
+  {
+    name: "stream"
+    data_type: TYPE_BOOL
+    dims: [ 1 ]
+    optional: true
+  }
+]
+
+output [
+  {
+    name: "text_output"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_MODEL
+  }
+]
+
+parameters {
+  key: "model"
+  value: { string_value: "mistralai/Mistral-7B-Instruct-v0.2" }
+}
+parameters {
+  key: "lora_adapter"
+  value: { string_value: "" }
+}
+parameters {
+  key: "dtype"
+  value: { string_value: "bfloat16" }
+}
+parameters {
+  key: "max_model_len"
+  value: { string_value: "8192" }
+}
+parameters {
+  key: "tensor_parallel_size"
+  value: { string_value: "1" }
+}
+parameters {
+  key: "gpu_memory_utilization"
+  value: { string_value: "0.90" }
+}
+parameters {
+  key: "enable_prefix_caching"
+  value: { string_value: "true" }
+}
+parameters {
+  key: "max_num_seqs"
+  value: { string_value: "256" }
+}
+parameters {
+  key: "max_num_batched_tokens"
+  value: { string_value: "8192" }
+}
