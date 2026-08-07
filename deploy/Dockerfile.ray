@@ -1,0 +1,24 @@
+# Ray Serve + vLLM. Requires an NVIDIA GPU and the NVIDIA container toolkit.
+FROM rayproject/ray:2.35.0-py311-gpu
+
+ENV PYTHONUNBUFFERED=1 \
+    HF_HOME=/home/ray/models/hf \
+    LLM_SERVE_MODEL=mistralai/Mistral-7B-Instruct-v0.2
+
+WORKDIR /home/ray/app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir \
+        "vllm>=0.6.0" \
+        "ray[serve]>=2.35" \
+        fastapi \
+        "uvicorn[standard]" \
+        pyyaml \
+        prometheus-client
+
+COPY llm_serve ./llm_serve
+COPY configs ./configs
+COPY deploy/ray ./deploy/ray
+
+EXPOSE 8000 8265
+CMD ["serve", "run", "--host", "0.0.0.0", "deploy.ray.serve_app:app"]

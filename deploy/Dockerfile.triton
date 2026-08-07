@@ -1,0 +1,26 @@
+# Triton Inference Server with the vLLM Python backend.
+# Requires an NVIDIA GPU and the NVIDIA container toolkit on the host.
+FROM nvcr.io/nvidia/tritonserver:24.08-vllm-python-py3
+
+ENV PYTHONUNBUFFERED=1 \
+    HF_HOME=/models/hf \
+    LLM_SERVE_MODEL=mistralai/Mistral-7B-Instruct-v0.2
+
+WORKDIR /workspace
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir pyyaml prometheus-client
+
+COPY llm_serve ./llm_serve
+COPY configs ./configs
+COPY deploy/triton/model_repository /models/model_repository
+
+# The engine loads weights on first request; a generous startup window avoids
+# Triton killing the model while a 7B checkpoint is still being read.
+EXPOSE 8000 8001 8002
+CMD ["tritonserver", \
+     "--model-repository=/models/model_repository", \
+     "--model-control-mode=explicit", \
+     "--load-model=mistral7b", \
+     "--exit-timeout-secs=120", \
+     "--log-verbose=0"]
