@@ -1,0 +1,83 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# --- virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- test / lint caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+
+# --- model weights and adapters (never commit; multi-GB) ---
+models/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+adapter_model*/
+merged-*/
+
+# --- HuggingFace / dataset caches ---
+.cache/
+hf_cache/
+.hf_home/
+*.lock
+
+# --- TensorRT-LLM build artifacts ---
+artifacts/
+*.engine
+*.plan
+trtllm-ckpt/
+trtllm-engine/
+build_manifest.json
+rank*.engine
+
+# --- benchmark output ---
+benchmarks/results/
+benchmarks/*.md
+benchmarks/*.csv
+benchmarks/*.json
+!benchmarks/README.md
+profiles/
+*.nsys-rep
+*.qdrep
+
+# --- Triton / Ray runtime state ---
+deploy/triton/model_repository/*/[0-9]*/__pycache__/
+/tmp/ray/
+ray_results/
+logs/
+*.log
+
+# --- Docker / compose local overrides ---
+docker-compose.override.yml
+.env
+
+# --- editors and OS ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
