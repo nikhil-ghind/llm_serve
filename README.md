@@ -81,19 +81,51 @@ flowchart TB
 
 The request path for one streamed completion:
 
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as FastAPI route
+    participant B as Backend protocol
+    participant E as Engine
+    participant M as Metrics
+
+    C->>A: POST /v1/completions with stream true
+    A->>A: validate, build GenerationRequest and SamplingParams
+    Note over A: /v1/chat/completions also renders the Mistral chat template
+    A->>B: generate_stream(request)
+    B->>E: prefix lookup, then prefill
+    loop one TokenChunk per generated token
+        E-->>B: TokenChunk
+        B-->>A: chunk
+        A-->>C: data: {...}
+    end
+    E-->>B: final chunk with finish_reason
+    A-->>C: data: {... finish_reason}
+    A-->>C: data: [DONE]
+    A->>M: record TTFT, ITL and end-to-end latency
 ```
-POST /v1/completions {"prompt": …, "stream": true}
-   │
-   ├─ parse + validate ────────────► GenerationRequest(SamplingParams)
-   ├─ chat endpoint only: render ──► "<s>[INST] system + user [/INST]"
-   │
-   ├─ backend.generate_stream(req) ─► engine: prefix lookup → prefill → decode loop
-   │        │
-   │        └─ TokenChunk ──► chat/text chunk ──► "data: {…}\n\n"   (per token)
-   │
-   ├─ final chunk with finish_reason ──► "data: {… finish_reason}\n\n"
-   └─ "data: [DONE]\n\n"   +   TTFT / ITL / e2e recorded on /metrics
+
+Inside the engine core, one request moves through the scheduler like this:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Waiting: add_request
+    Waiting --> Running: admitted once blocks and token budget allow
+    Running --> Running: chunked prefill advances a slice per step
+    Running --> Decoding: prefill complete
+    Decoding --> Decoding: one token appended per step
+    Decoding --> Swapped: KV exhausted, newest sequence preempted
+    Running --> Swapped: block allocation fails mid prefill
+    Swapped --> Decoding: blocks fit again, computed tokens retained
+    Decoding --> Finished: max_tokens reached or stop condition
+    Finished --> [*]
 ```
+
+Because the batch is rebuilt on every `step()`, arrivals and departures do not
+have to line up with each other:
+
+<img src="docs/continuous-batching.svg" alt="Animated view of requests joining, chunk-prefilling, decoding, being preempted and finishing across successive scheduler steps" width="880">
+
 
 ## Project structure
 
